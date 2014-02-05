@@ -36,6 +36,9 @@ var gCallTracer = 0;
 // Number of failed tests.
 var gFailedTests = 0;
 
+// Number of attempted connection tests.
+var gConnTests = 0;
+
 function display(text)
 {
 	var element = document.getElementById('output');
@@ -132,6 +135,7 @@ function startTest()
 	gDeviceData = {};
 	gCallTracer = 0;
 	gFailedTests = 0;
+	gConnTests = 0;
 
 	testLog('Starting test');
 
@@ -158,10 +162,12 @@ function testScan()
 		function(device)
 		{
 			// Run the test suite once per device.
-			if (!gFoundDevices[device.address])
+			if (!gFoundDevices[device.address] && gConnTests == 0)
 			{
 				// Mark device as found.
 				gFoundDevices[device.address] = true;
+
+				gConnTests = 1;
 
 				// Start first test.
 				testConnectClose(device.address, 0);
@@ -185,7 +191,7 @@ function testConnectClose(address, counter)
 			{
 				testLog('LOG:  testConnectClose(' + counter + ') device: ' + address);
 
-				if (counter < 10)
+				if (counter < 0)
 				{
 					evothings.ble.close(info.deviceHandle);
 				}
@@ -208,7 +214,7 @@ function testConnectClose(address, counter)
 			}
 			else if (info.state == 0) // Disconnected
 			{
-				if (counter < 10)
+				if (counter < 0)
 				{
 					// Connect again.
 					testConnectClose(address, counter + 1);
@@ -220,7 +226,7 @@ function testConnectClose(address, counter)
 		},
 		function(errorCode)
 		{
-			testLog('FAIL: testConnectClose device: ' + address + ' error: ' + errorCode);
+			testLog('FAIL: testConnectClose('+counter+') device: ' + address + ' error: ' + errorCode);
 			testLog('Try to start test again (this works on iOS)');
 		}
 	);
@@ -237,7 +243,7 @@ function testRSSI(deviceHandle, deviceData, counter)
 		{
 			testLog('LOG:  testRSSI(' + counter + ') deviceHandle: ' + deviceHandle +
 				' rssi: ' + rssi);
-			
+
 			if (counter < 10)
 			{
 				// Read RSSI again. Delay must be used, BLE cannot
@@ -384,7 +390,7 @@ function testDescriptors(deviceHandle, characteristicHandle, characteristicData)
 			for (var i = 0; i < descriptors.length; ++i)
 			{
 				var descriptor = descriptors[i];
-				
+
 				// Create entry for descriptor.
 				characteristicData[descriptor.handle] = {};
 				characteristicData[descriptor.handle]['UUID'] = descriptor.uuid;
